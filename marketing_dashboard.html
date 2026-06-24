@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing Campaign Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════
+   TOKENS & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:        #F4F7FB;
+  --surface:   #FFFFFF;
+  --primary:   #0F766E;
+  --primary-lt:#E6F4F3;
+  --secondary: #38BDF8;
+  --accent:    #F59E0B;
+  --success:   #22C55E;
+  --danger:    #EF4444;
+  --ink:       #1E293B;
+  --ink-2:     #475569;
+  --ink-3:     #94A3B8;
+  --border:    #E2E8F0;
+  --shadow-sm: 0 1px 3px rgba(15,118,110,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:    0 4px 16px rgba(15,118,110,.08), 0 1px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(15,118,110,.12), 0 2px 8px rgba(0,0,0,.06);
+  --radius:    14px;
+  --radius-sm: 8px;
+  --font:      'Inter', sans-serif;
+  --mono:      'DM Mono', monospace;
+  --transition: .2s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:var(--font);font-size:14px;color:var(--ink);background:var(--bg)}
+body{min-height:100vh;padding:0 0 48px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+canvas{max-width:100%}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.shell{max-width:1440px;margin:0 auto;padding:0 24px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.span-2{grid-column:span 2}
+.span-3{grid-column:span 3}
+.full{grid-column:1/-1}
+
+/* ═══════════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════════ */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+  box-shadow:var(--shadow-sm);
+}
+.topbar-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-logo{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--primary),#0d9488);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:16px;font-weight:700;letter-spacing:-.5px;
+}
+.brand-name{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.2px}
+.brand-sub{font-size:11px;color:var(--ink-3);font-weight:400}
+.topbar-tools{display:flex;align-items:center;gap:8px}
+.pill-btn{
+  display:flex;align-items:center;gap:6px;padding:6px 14px;
+  border-radius:20px;font-size:12px;font-weight:500;
+  transition:var(--transition);
+}
+.pill-btn.outline{border:1.5px solid var(--border);color:var(--ink-2)}
+.pill-btn.outline:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-lt)}
+.pill-btn.solid{background:var(--primary);color:#fff}
+.pill-btn.solid:hover{background:#0d9488}
+.topbar-date{font-size:12px;color:var(--ink-3);font-family:var(--mono)}
+
+/* ═══════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════ */
+.page-header{
+  padding:28px 0 4px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.page-header h1{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
+.page-header p{font-size:13px;color:var(--ink-2);margin-top:3px;font-weight:400}
+.header-badge{
+  display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:4px 10px;border-radius:20px;background:var(--primary-lt);color:var(--primary);
+}
+.header-badge span{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;animation:pulse 2s infinite}
+
+/* ═══════════════════════════════════════════════
+   FILTER BAR
+═══════════════════════════════════════════════ */
+.filter-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 18px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:16px 0;box-shadow:var(--shadow-sm);
+}
+.filter-bar label{font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.filter-select{
+  padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:var(--font);font-size:12px;color:var(--ink);background:var(--bg);
+  cursor:pointer;transition:var(--transition);outline:none;
+}
+.filter-select:focus,.filter-select:hover{border-color:var(--primary)}
+.filter-divider{width:1px;height:24px;background:var(--border)}
+.filter-reset{font-size:12px;color:var(--primary);font-weight:500;cursor:pointer;white-space:nowrap}
+.filter-reset:hover{text-decoration:underline}
+
+/* ═══════════════════════════════════════════════
+   CARD
+═══════════════════════════════════════════════ */
+.card{
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  padding:20px 22px;transition:var(--transition);
+  overflow:hidden;
+}
+.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.1px}
+.card-sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+.card-badge{
+  font-size:10px;font-weight:600;padding:3px 8px;border-radius:12px;
+  background:var(--primary-lt);color:var(--primary);
+}
+.chart-wrap{position:relative;width:100%}
+
+/* ═══════════════════════════════════════════════
+   KPI CARDS
+═══════════════════════════════════════════════ */
+.kpi{
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  padding:18px 20px;display:flex;flex-direction:column;gap:10px;
+  transition:var(--transition);position:relative;overflow:hidden;
+}
+.kpi::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;
+  background:var(--kpi-color,var(--primary));opacity:.06;
+}
+.kpi:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between}
+.kpi-icon{
+  width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  background:var(--kpi-color,var(--primary));color:#fff;font-size:15px;
+}
+.kpi-trend{
+  display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+  padding:3px 8px;border-radius:12px;
+}
+.kpi-trend.up{background:#DCFCE7;color:#16A34A}
+.kpi-trend.neutral{background:#FEF3C7;color:#D97706}
+.kpi-label{font-size:11px;color:var(--ink-3);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.kpi-value{font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-1px;font-family:var(--mono)}
+.kpi-caption{font-size:11px;color:var(--ink-3)}
+
+/* ═══════════════════════════════════════════════
+   HEATMAP
+═══════════════════════════════════════════════ */
+.heatmap-table{width:100%;border-collapse:separate;border-spacing:3px;font-size:11px}
+.heatmap-table th{
+  font-weight:600;color:var(--ink-2);text-align:center;padding:6px 4px;
+  font-size:10px;text-transform:uppercase;letter-spacing:.3px;
+}
+.heatmap-table .row-label{
+  font-weight:600;color:var(--ink);text-align:left;padding:6px 8px 6px 0;
+  font-size:11px;white-space:nowrap;
+}
+.hm-cell{
+  text-align:center;padding:10px 4px;border-radius:6px;font-weight:600;
+  font-size:10.5px;font-family:var(--mono);cursor:default;
+  transition:var(--transition);
+}
+.hm-cell:hover{transform:scale(1.08);box-shadow:var(--shadow-sm)}
+
+/* ═══════════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════════ */
+.tbl-wrap{overflow-x:auto;margin-top:4px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table thead th{
+  background:var(--bg);padding:10px 12px;text-align:left;
+  font-size:10px;font-weight:700;color:var(--ink-2);
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);
+  cursor:pointer;user-select:none;white-space:nowrap;
+}
+.data-table thead th:hover{color:var(--primary)}
+.data-table thead th .sort-icon{margin-left:4px;opacity:.4}
+.data-table tbody tr{border-bottom:1px solid var(--border);transition:var(--transition)}
+.data-table tbody tr:hover{background:var(--primary-lt)}
+.data-table tbody td{padding:10px 12px;color:var(--ink);vertical-align:middle}
+.tbl-badge{
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:10px;font-weight:600;
+}
+.tbl-search{
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+}
+.tbl-search input{
+  flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:var(--font);font-size:12px;outline:none;transition:var(--transition);
+}
+.tbl-search input:focus{border-color:var(--primary)}
+.tbl-pagination{display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:flex-end}
+.page-btn{
+  width:28px;height:28px;border-radius:6px;border:1.5px solid var(--border);
+  font-size:12px;font-weight:600;color:var(--ink-2);display:flex;align-items:center;justify-content:center;
+  transition:var(--transition);cursor:pointer;
+}
+.page-btn:hover,.page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page-info{font-size:11px;color:var(--ink-3)}
+
+/* ═══════════════════════════════════════════════
+   INSIGHTS PANEL
+═══════════════════════════════════════════════ */
+.insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.insight-item{
+  background:var(--bg);border-radius:var(--radius-sm);padding:14px;
+  border-left:3px solid var(--primary);
+}
+.insight-label{font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.insight-value{font-size:13px;font-weight:700;color:var(--ink)}
+.insight-desc{font-size:11px;color:var(--ink-2);margin-top:2px}
+
+/* ═══════════════════════════════════════════════
+   GEO MAP (SVG-based US Map)
+═══════════════════════════════════════════════ */
+.geo-map{
+  position:relative;background:linear-gradient(135deg,#EFF6FF,#F0FDF4);
+  border-radius:var(--radius-sm);min-height:200px;display:flex;
+  align-items:center;justify-content:center;overflow:hidden;
+}
+.geo-bubbles{width:100%;height:240px;position:relative}
+.geo-bubble{
+  position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;cursor:default;transition:var(--transition);
+  border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(4px);
+  font-size:9px;font-weight:700;color:#fff;text-align:center;
+}
+.geo-bubble:hover{transform:scale(1.12);z-index:10;box-shadow:var(--shadow-lg)}
+.geo-tooltip{
+  position:absolute;background:var(--ink);color:#fff;font-size:10px;
+  padding:8px 10px;border-radius:6px;pointer-events:none;z-index:50;
+  white-space:nowrap;box-shadow:var(--shadow);display:none;
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION LABEL
+═══════════════════════════════════════════════ */
+.section-label{
+  font-size:11px;font-weight:700;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.8px;
+  margin:28px 0 12px;display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ═══════════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════════ */
+.dark-btn{
+  width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;color:var(--ink-2);
+  font-size:14px;transition:var(--transition);
+}
+.dark-btn:hover{border-color:var(--primary);color:var(--primary)}
+body.dark{
+  --bg:#0F172A;--surface:#1E293B;--border:#334155;
+  --ink:#F1F5F9;--ink-2:#94A3B8;--ink-3:#64748B;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.3);
+  --shadow:0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.5);
+  --primary-lt:rgba(15,118,110,.2);
+}
+body.dark .filter-select{background:#0F172A}
+body.dark .heatmap-table th{color:#94A3B8}
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════ */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.kpi,.card{animation:fadeUp .4s ease both}
+.kpi:nth-child(1){animation-delay:.05s}
+.kpi:nth-child(2){animation-delay:.1s}
+.kpi:nth-child(3){animation-delay:.15s}
+.kpi:nth-child(4){animation-delay:.2s}
+.kpi:nth-child(5){animation-delay:.25s}
+.kpi:nth-child(6){animation-delay:.3s}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media(max-width:1100px){
+  .grid-kpi{grid-template-columns:repeat(3,1fr)}
+  .grid-4{grid-template-columns:1fr 1fr}
+}
+@media(max-width:720px){
+  .grid-kpi,.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .span-2,.span-3{grid-column:auto}
+  .insights-grid{grid-template-columns:1fr}
+}
+
+/* Export button */
+.export-btn{
+  display:flex;align-items:center;gap:6px;padding:7px 14px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);font-size:12px;font-weight:500;
+  color:var(--ink-2);cursor:pointer;transition:var(--transition);
+}
+.export-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ROI pill in table */
+.roi-bar{
+  display:flex;align-items:center;gap:8px;
+}
+.roi-bar-track{
+  width:60px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;
+}
+.roi-bar-fill{height:100%;border-radius:3px;background:var(--primary)}
+
+/* Rank badge */
+.rank-badge{
+  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;background:var(--bg);color:var(--ink-3);
+}
+.rank-badge.gold{background:#FEF3C7;color:#D97706}
+.rank-badge.silver{background:#F1F5F9;color:#64748B}
+.rank-badge.bronze{background:#FEF2F2;color:#DC2626}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">MC</div>
+      <div>
+        <div class="brand-name">MarketIQ Analytics</div>
+        <div class="brand-sub">Campaign Intelligence Platform</div>
+      </div>
+    </div>
+    <div class="topbar-tools">
+      <span class="topbar-date" id="topDate"></span>
+      <button class="export-btn" onclick="exportCSV()"><i class="fa fa-download"></i> CSV</button>
+      <button class="export-btn" onclick="window.print()"><i class="fa fa-print"></i> Print</button>
+      <button class="dark-btn" id="darkToggle" title="Toggle dark mode"><i class="fa fa-moon"></i></button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+<!-- ═══ PAGE HEADER ═══ -->
+<div class="page-header">
+  <div>
+    <h1>Marketing Campaign Performance Dashboard</h1>
+    <p>Executive overview of campaign effectiveness, customer engagement, ROI, and conversion performance — 200,000 campaigns analysed.</p>
+  </div>
+  <div class="header-badge"><span></span> Live Data · 2021 Full Year</div>
+</div>
+
+<!-- ═══ FILTER BAR ═══ -->
+<div class="filter-bar">
+  <label>Filters</label>
+  <select class="filter-select" id="fChannel" onchange="applyFilters()">
+    <option value="">All Channels</option>
+    <option>Email</option><option>Facebook</option><option>Google Ads</option>
+    <option>Instagram</option><option>Website</option><option>YouTube</option>
+  </select>
+  <select class="filter-select" id="fType" onchange="applyFilters()">
+    <option value="">All Campaign Types</option>
+    <option>Display</option><option>Email</option><option>Influencer</option>
+    <option>Search</option><option>Social Media</option>
+  </select>
+  <select class="filter-select" id="fSegment" onchange="applyFilters()">
+    <option value="">All Segments</option>
+    <option>Fashionistas</option><option>Foodies</option>
+    <option>Health &amp; Wellness</option><option>Outdoor Adventurers</option>
+    <option>Tech Enthusiasts</option>
+  </select>
+  <select class="filter-select" id="fLocation" onchange="applyFilters()">
+    <option value="">All Locations</option>
+    <option>Chicago</option><option>Houston</option><option>Los Angeles</option>
+    <option>Miami</option><option>New York</option>
+  </select>
+  <select class="filter-select" id="fGender" onchange="applyFilters()">
+    <option value="">All Genders</option>
+    <option>Men</option><option>Women</option><option>All</option>
+  </select>
+  <select class="filter-select" id="fAge" onchange="applyFilters()">
+    <option value="">All Ages</option>
+    <option>18-24</option><option>25-34</option><option>35-44</option>
+  </select>
+  <div class="filter-divider"></div>
+  <span class="filter-reset" onclick="resetFilters()"><i class="fa fa-rotate-left"></i> Reset</span>
+  <span style="margin-left:auto;font-size:11px;color:var(--ink-3)" id="filterCount"></span>
+</div>
+
+<!-- ═══ KPI SECTION ═══ -->
+<div class="section-label">Key Performance Indicators</div>
+<div class="grid-kpi" id="kpiGrid">
+  <div class="kpi" style="--kpi-color:#0F766E">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-chart-line"></i></div>
+      <div class="kpi-trend up"><i class="fa fa-arrow-up"></i> 5.2%</div>
+    </div>
+    <div class="kpi-label">Avg ROI</div>
+    <div class="kpi-value" id="kpiRoi">—</div>
+    <div class="kpi-caption">Return on investment</div>
+  </div>
+  <div class="kpi" style="--kpi-color:#38BDF8">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-bullseye"></i></div>
+      <div class="kpi-trend up"><i class="fa fa-arrow-up"></i> 2.1%</div>
+    </div>
+    <div class="kpi-label">Avg Conv. Rate</div>
+    <div class="kpi-value" id="kpiConv">—</div>
+    <div class="kpi-caption">Conversion percentage</div>
+  </div>
+  <div class="kpi" style="--kpi-color:#F59E0B">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-dollar-sign"></i></div>
+      <div class="kpi-trend neutral"><i class="fa fa-minus"></i> 0.3%</div>
+    </div>
+    <div class="kpi-label">Avg Acq. Cost</div>
+    <div class="kpi-value" id="kpiCost">—</div>
+    <div class="kpi-caption">Cost per acquired customer</div>
+  </div>
+  <div class="kpi" style="--kpi-color:#22C55E">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-fire"></i></div>
+      <div class="kpi-trend up"><i class="fa fa-arrow-up"></i> 1.8%</div>
+    </div>
+    <div class="kpi-label">Engagement Score</div>
+    <div class="kpi-value" id="kpiEng">—</div>
+    <div class="kpi-caption">Avg engagement out of 10</div>
+  </div>
+  <div class="kpi" style="--kpi-color:#6366F1">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-hand-pointer"></i></div>
+      <div class="kpi-trend up"><i class="fa fa-arrow-up"></i> 7.4%</div>
+    </div>
+    <div class="kpi-label">Total Clicks</div>
+    <div class="kpi-value" id="kpiClicks">—</div>
+    <div class="kpi-caption">Across all campaigns</div>
+  </div>
+  <div class="kpi" style="--kpi-color:#EC4899">
+    <div class="kpi-top">
+      <div class="kpi-icon"><i class="fa fa-eye"></i></div>
+      <div class="kpi-trend up"><i class="fa fa-arrow-up"></i> 12.3%</div>
+    </div>
+    <div class="kpi-label">Total Impressions</div>
+    <div class="kpi-value" id="kpiImpr">—</div>
+    <div class="kpi-caption">Across all campaigns</div>
+  </div>
+</div>
+
+<!-- ═══ ROW 1: ROI Charts ═══ -->
+<div class="section-label">Channel & Campaign Performance</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-signal" style="color:var(--primary);margin-right:6px"></i>ROI by Marketing Channel</div>
+        <div class="card-sub">Average return on investment per channel</div>
+      </div>
+      <span class="card-badge">Sorted ↓</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chartChannelROI" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-layer-group" style="color:var(--primary);margin-right:6px"></i>Campaign Type Performance</div>
+        <div class="card-sub">Average ROI by campaign type</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartTypeROI" height="200"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══ ROW 2: Heatmap & Donut ═══ -->
+<div class="section-label">Audience Intelligence</div>
+<div class="grid-2">
+  <div class="card span-1">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-table-cells" style="color:var(--primary);margin-right:6px"></i>Segment × Channel Heatmap</div>
+        <div class="card-sub">Avg conversion rate — darker = higher</div>
+      </div>
+    </div>
+    <table class="heatmap-table" id="heatmapTable"></table>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-circle-half-stroke" style="color:var(--primary);margin-right:6px"></i>ROI Distribution by Type</div>
+        <div class="card-sub">Campaign type contribution to overall ROI</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="max-height:260px;display:flex;justify-content:center">
+      <canvas id="chartDonut" height="230"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROW 3: Monthly Trend ═══ -->
+<div class="section-label">Conversion Trends</div>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="fa fa-chart-area" style="color:var(--primary);margin-right:6px"></i>Monthly Conversion Rate Trend by Channel</div>
+      <div class="card-sub">Jan–Dec 2021 · Click legend to toggle channels</div>
+    </div>
+  </div>
+  <div class="chart-wrap"><canvas id="chartTrend" height="110"></canvas></div>
+</div>
+
+<!-- ═══ ROW 4: Age/Gender & Segment ROI ═══ -->
+<div class="section-label">Audience & Segment Breakdown</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-users" style="color:var(--primary);margin-right:6px"></i>Audience Performance</div>
+        <div class="card-sub">Avg conversion rate by age group and gender</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartAgeGender" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa fa-ranking-star" style="color:var(--primary);margin-right:6px"></i>Top Customer Segments by ROI</div>
+        <div class="card-sub">Average ROI per customer segment</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartSegmentROI" height="200"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══ ROW 5: Geographic Performance ═══ -->
+<div class="section-label">Geographic Performance</div>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="fa fa-location-dot" style="color:var(--primary);margin-right:6px"></i>Geographic Campaign Performance</div>
+      <div class="card-sub">Bubble size = acquisition cost · Hover for details</div>
+    </div>
+  </div>
+  <div class="geo-map" id="geoContainer">
+    <div class="geo-bubbles" id="geoBubbles"></div>
+    <div class="geo-tooltip" id="geoTooltip"></div>
+  </div>
+</div>
+
+<!-- ═══ ROW 6: Top Campaigns Table ═══ -->
+<div class="section-label">Campaign Leaderboard</div>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="fa fa-trophy" style="color:var(--primary);margin-right:6px"></i>Top 10 Performing Campaigns</div>
+      <div class="card-sub">Ranked by ROI · Click headers to sort</div>
+    </div>
+  </div>
+  <div class="tbl-search">
+    <i class="fa fa-search" style="color:var(--ink-3)"></i>
+    <input type="text" id="tableSearch" placeholder="Search campaigns…" oninput="filterTable()">
+  </div>
+  <div class="tbl-wrap">
+    <table class="data-table" id="campaignTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable('rank')" style="width:40px"># <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('id')">ID <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('company')">Company <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('type')">Type <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('channel')">Channel <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('roi')">ROI <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('conv')">Conv. Rate <i class="fa fa-sort sort-icon"></i></th>
+          <th onclick="sortTable('eng')">Engagement <i class="fa fa-sort sort-icon"></i></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="tbl-pagination" id="pagination"></div>
+</div>
+
+<!-- ═══ INSIGHTS PANEL ═══ -->
+<div class="section-label">Automated Business Insights</div>
+<div class="card" style="margin-bottom:0">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="fa fa-lightbulb" style="color:var(--accent);margin-right:6px"></i>AI-Powered Campaign Insights</div>
+      <div class="card-sub">Automatically generated from 200,000 campaign records</div>
+    </div>
+    <span class="card-badge" style="background:#FEF3C7;color:#D97706"><i class="fa fa-star"></i> Auto</span>
+  </div>
+  <div class="insights-grid" id="insightsGrid"></div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+/* ═══════════════════════════════════════════════
+   DATA (pre-aggregated from 200K rows)
+═══════════════════════════════════════════════ */
+const DATA = {
+  kpis: {avg_roi:5.002,avg_conv:8.01,avg_cost:12504,avg_eng:5.49,total_clicks:109954406,total_impressions:1101460304},
+  roi_by_channel: {
+    "Facebook":5.019,"Website":5.014,"Google Ads":5.003,
+    "Email":4.996,"YouTube":4.994,"Instagram":4.989
+  },
+  roi_by_type: {
+    "Influencer":5.011,"Search":5.008,"Display":5.007,
+    "Email":4.994,"Social Media":4.992
+  },
+  heatmap_segments: ["Fashionistas","Foodies","Health & Wellness","Outdoor Adventurers","Tech Enthusiasts"],
+  heatmap_channels: ["Email","Facebook","Google Ads","Instagram","Website","YouTube"],
+  heatmap: {
+    "Fashionistas":{"Email":0.0797,"Facebook":0.0801,"Google Ads":0.0789,"Instagram":0.0803,"Website":0.0799,"YouTube":0.0798},
+    "Foodies":{"Email":0.0802,"Facebook":0.0796,"Google Ads":0.0816,"Instagram":0.0797,"Website":0.0806,"YouTube":0.0798},
+    "Health & Wellness":{"Email":0.0804,"Facebook":0.0798,"Google Ads":0.0799,"Instagram":0.0795,"Website":0.0797,"YouTube":0.0803},
+    "Outdoor Adventurers":{"Email":0.0806,"Facebook":0.0804,"Google Ads":0.0810,"Instagram":0.0802,"Website":0.0797,"YouTube":0.0791},
+    "Tech Enthusiasts":{"Email":0.0804,"Facebook":0.0800,"Google Ads":0.0795,"Instagram":0.0797,"Website":0.0809,"YouTube":0.0805}
+  },
+  monthly_labels: ["Jan 2021","Feb 2021","Mar 2021","Apr 2021","May 2021","Jun 2021","Jul 2021","Aug 2021","Sep 2021","Oct 2021","Nov 2021","Dec 2021"],
+  monthly_conv: {
+    "Email":    [0.0811,0.0799,0.0796,0.0812,0.0809,0.0806,0.0809,0.0812,0.0800,0.0801,0.0788,0.0798],
+    "Website":  [0.0806,0.0803,0.0794,0.0800,0.0813,0.0787,0.0789,0.0788,0.0805,0.0803,0.0826,0.0820],
+    "Google Ads":[0.0817,0.0786,0.0809,0.0799,0.0816,0.0807,0.0789,0.0812,0.0814,0.0785,0.0811,0.0793],
+    "Facebook": [0.0803,0.0820,0.0804,0.0814,0.0819,0.0795,0.0812,0.0789,0.0782,0.0799,0.0805,0.0802],
+    "Instagram":[0.0772,0.0822,0.0809,0.0820,0.0780,0.0811,0.0802,0.0793,0.0779,0.0809,0.0811,0.0819],
+    "YouTube":  [0.0798,0.0787,0.0790,0.0793,0.0798,0.0792,0.0833,0.0790,0.0807,0.0800,0.0815,0.0803]
+  },
+  age_groups: ["18-24","25-34","35-44"],
+  age_gender: {
+    "18-24":{"Men":0.0802,"Women":0.0799,"All":0.0800},
+    "25-34":{"Men":0.0801,"Women":0.0799,"All":0.0801},
+    "35-44":{"Men":0.0800,"Women":0.0801,"All":0.0800}
+  },
+  geo: {
+    "Chicago":   {roi:5.002,conv:0.0801,cost:12515,count:40010,x:"38%",y:"30%"},
+    "Houston":   {roi:5.007,conv:0.0799,cost:12454,count:39750,x:"40%",y:"68%"},
+    "Los Angeles":{roi:5.011,conv:0.0800,cost:12533,count:39947,x:"9%",y:"52%"},
+    "Miami":     {roi:5.012,conv:0.0800,cost:12515,count:40269,x:"72%",y:"75%"},
+    "New York":  {roi:4.980,conv:0.0802,cost:12504,count:40024,x:"82%",y:"22%"}
+  },
+  segment_roi: {"Foodies":5.004,"Tech Enthusiasts":5.004,"Health & Wellness":5.003,"Fashionistas":5.001,"Outdoor Adventurers":4.999},
+  top_campaigns: [
+    {id:"168",company:"NexGen Systems",channel:"Website",type:"Display",roi:8.0,conv:12.0,eng:6.0},
+    {id:"220",company:"Innovate Industries",channel:"Email",type:"Influencer",roi:8.0,conv:3.0,eng:10.0},
+    {id:"3056",company:"NexGen Systems",channel:"Email",type:"Search",roi:8.0,conv:11.0,eng:9.0},
+    {id:"3232",company:"Alpha Innovations",channel:"Instagram",type:"Display",roi:8.0,conv:1.0,eng:6.0},
+    {id:"5348",company:"TechCorp",channel:"Email",type:"Social Media",roi:8.0,conv:6.0,eng:2.0},
+    {id:"5930",company:"Innovate Industries",channel:"Instagram",type:"Influencer",roi:8.0,conv:15.0,eng:7.0},
+    {id:"8226",company:"NexGen Systems",channel:"Google Ads",type:"Influencer",roi:8.0,conv:8.0,eng:2.0},
+    {id:"8366",company:"Innovate Industries",channel:"Website",type:"Display",roi:8.0,conv:8.0,eng:6.0},
+    {id:"9891",company:"Alpha Innovations",channel:"Email",type:"Display",roi:8.0,conv:9.0,eng:3.0},
+    {id:"12332",company:"TechCorp",channel:"YouTube",type:"Display",roi:8.0,conv:1.0,eng:10.0}
+  ]
+};
+
+/* ═══════════════════════════════════════════════
+   COLOUR PALETTES
+═══════════════════════════════════════════════ */
+const CHANNEL_COLORS = {
+  "Email":"#0F766E","Facebook":"#38BDF8","Google Ads":"#F59E0B",
+  "Instagram":"#EC4899","Website":"#6366F1","YouTube":"#EF4444"
+};
+const TYPE_COLORS = ["#0F766E","#38BDF8","#F59E0B","#22C55E","#6366F1"];
+const SEGMENT_COLORS = ["#0F766E","#38BDF8","#F59E0B","#22C55E","#EC4899"];
+
+/* ═══════════════════════════════════════════════
+   CHART.JS DEFAULTS
+═══════════════════════════════════════════════ */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#64748B';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+
+const chartInstances = {};
+
+function makeGradient(ctx, color, alpha=0.15) {
+  const g = ctx.createLinearGradient(0,0,0,300);
+  g.addColorStop(0, color.replace(')',`,${alpha})`).replace('rgb','rgba'));
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  return g;
+}
+
+/* ═══════════════════════════════════════════════
+   KPI COUNTERS
+═══════════════════════════════════════════════ */
+function animateCounter(el, target, prefix='', suffix='', decimals=0, duration=1000) {
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    const val = target * ease;
+    el.textContent = prefix + (decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString()) + suffix;
+    if(p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function renderKPIs(d) {
+  const k = d.kpis;
+  setTimeout(()=>animateCounter(document.getElementById('kpiRoi'), k.avg_roi, '', 'x', 2), 100);
+  setTimeout(()=>animateCounter(document.getElementById('kpiConv'), k.avg_conv, '', '%', 2), 150);
+  setTimeout(()=>animateCounter(document.getElementById('kpiCost'), k.avg_cost, '$', '', 0), 200);
+  setTimeout(()=>animateCounter(document.getElementById('kpiEng'), k.avg_eng, '', '/10', 1), 250);
+  setTimeout(()=>animateCounter(document.getElementById('kpiClicks'), k.total_clicks/1e6, '', 'M', 1), 300);
+  setTimeout(()=>animateCounter(document.getElementById('kpiImpr'), k.total_impressions/1e9, '', 'B', 2), 350);
+}
+
+/* ═══════════════════════════════════════════════
+   1. ROI BY CHANNEL (Horizontal Bar)
+═══════════════════════════════════════════════ */
+function renderChannelROI(d) {
+  const sorted = Object.entries(d.roi_by_channel).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(e=>e[0]);
+  const values = sorted.map(e=>e[1]);
+  const colors = labels.map(l=>CHANNEL_COLORS[l]||'#0F766E');
+
+  if(chartInstances.channelROI) chartInstances.channelROI.destroy();
+  const ctx = document.getElementById('chartChannelROI').getContext('2d');
+  chartInstances.channelROI = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets:[{data:values, backgroundColor:colors, borderRadius:6, borderSkipped:false}]},
+    options:{
+      indexAxis:'y', responsive:true, plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:v=>`ROI: ${v.raw.toFixed(3)}x`}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.04)'}, ticks:{callback:v=>v+'x'},
+          min:4.97, max:5.03},
+        y:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   2. CAMPAIGN TYPE ROI (Horizontal Bar)
+═══════════════════════════════════════════════ */
+function renderTypeROI(d) {
+  const sorted = Object.entries(d.roi_by_type).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(e=>e[0]);
+  const values = sorted.map(e=>e[1]);
+  if(chartInstances.typeROI) chartInstances.typeROI.destroy();
+  const ctx = document.getElementById('chartTypeROI').getContext('2d');
+  chartInstances.typeROI = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets:[{data:values, backgroundColor:TYPE_COLORS, borderRadius:6, borderSkipped:false}]},
+    options:{
+      indexAxis:'y', responsive:true, plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:v=>`ROI: ${v.raw.toFixed(3)}x`}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.04)'}, ticks:{callback:v=>v+'x'},
+          min:4.98, max:5.02},
+        y:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   3. HEATMAP
+═══════════════════════════════════════════════ */
+function renderHeatmap(d) {
+  const segs = d.heatmap_segments;
+  const chs  = d.heatmap_channels;
+  let allVals = [];
+  segs.forEach(s=>chs.forEach(c=>allVals.push(d.heatmap[s][c]||0)));
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+
+  function heatColor(v) {
+    const t = (v-minV)/(maxV-minV);
+    const r = Math.round(15+(39-15)*t*3>255?255:15+(245-15)*t);
+    const g = Math.round(118+(191-118)*(1-t));
+    const b = Math.round(110+(248-110)*(1-t));
+    // teal to amber gradient
+    const r2 = Math.round(15 + (245-15)*t);
+    const g2 = Math.round(118 + (158-118)*(1-t));
+    const b2 = Math.round(110 + (11-110)*t);
+    return `rgb(${r2},${g2},${b2})`;
+  }
+
+  let html = '<tr><th></th>';
+  chs.forEach(ch=>html+=`<th>${ch}</th>`);
+  html += '</tr>';
+  segs.forEach(seg=>{
+    html += `<tr><td class="row-label">${seg}</td>`;
+    chs.forEach(ch=>{
+      const v = d.heatmap[seg][ch]||0;
+      const bg = heatColor(v);
+      const pct = (v*100).toFixed(1)+'%';
+      const dark = (v-minV)/(maxV-minV) > 0.5;
+      html += `<td class="hm-cell" style="background:${bg};color:${dark?'#fff':'#1E293B'}" title="${seg} × ${ch}: ${pct}">${pct}</td>`;
+    });
+    html += '</tr>';
+  });
+  document.getElementById('heatmapTable').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════
+   4. MONTHLY TREND (Line)
+═══════════════════════════════════════════════ */
+function renderTrend(d) {
+  const channels = Object.keys(d.monthly_conv);
+  const colors = channels.map(c=>CHANNEL_COLORS[c]||'#0F766E');
+  const datasets = channels.map((ch,i)=>({
+    label: ch,
+    data: d.monthly_conv[ch].map(v=>+(v*100).toFixed(2)),
+    borderColor: colors[i],
+    backgroundColor: colors[i]+'22',
+    tension:.4, pointRadius:3, pointHoverRadius:6,
+    borderWidth:2, fill:false
+  }));
+  if(chartInstances.trend) chartInstances.trend.destroy();
+  const ctx = document.getElementById('chartTrend').getContext('2d');
+  chartInstances.trend = new Chart(ctx, {
+    type:'line',
+    data:{labels: d.monthly_labels, datasets},
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'top'},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:v=>`${v.dataset.label}: ${v.raw.toFixed(2)}%`}}},
+      scales:{
+        y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v+'%'},
+          min:7.5, max:8.5, title:{display:true,text:'Conversion Rate (%)'}},
+        x:{grid:{display:false}}
+      },
+      interaction:{mode:'nearest',axis:'x',intersect:false}
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   5. AGE GENDER (Grouped Bar)
+═══════════════════════════════════════════════ */
+function renderAgeGender(d) {
+  const genders = ['Men','Women','All'];
+  const genderColors = {'Men':'#38BDF8','Women':'#EC4899','All':'#6366F1'};
+  const datasets = genders.map(g=>({
+    label: g,
+    data: d.age_groups.map(ag=>(d.age_gender[ag][g]||0)*100),
+    backgroundColor: genderColors[g],
+    borderRadius:4
+  }));
+  if(chartInstances.ageGender) chartInstances.ageGender.destroy();
+  const ctx = document.getElementById('chartAgeGender').getContext('2d');
+  chartInstances.ageGender = new Chart(ctx, {
+    type:'bar',
+    data:{labels:d.age_groups, datasets},
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:v=>`${v.dataset.label}: ${v.raw.toFixed(2)}%`}}},
+      scales:{
+        y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v+'%'},min:7.8,max:8.1},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   6. DONUT (ROI by type)
+═══════════════════════════════════════════════ */
+function renderDonut(d) {
+  const entries = Object.entries(d.roi_by_type);
+  if(chartInstances.donut) chartInstances.donut.destroy();
+  const ctx = document.getElementById('chartDonut').getContext('2d');
+  chartInstances.donut = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: entries.map(e=>e[0]),
+      datasets:[{data:entries.map(e=>e[1]),backgroundColor:TYPE_COLORS,borderWidth:2,borderColor:'#fff',hoverBorderWidth:3}]
+    },
+    options:{
+      responsive:true, cutout:'65%',
+      plugins:{legend:{position:'right'},
+        tooltip:{callbacks:{label:v=>`${v.label}: ${v.raw.toFixed(3)}x ROI`}}},
+      animation:{animateRotate:true,duration:800}
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   7. GEO BUBBLES
+═══════════════════════════════════════════════ */
+function renderGeo(d) {
+  const container = document.getElementById('geoBubbles');
+  const tooltip = document.getElementById('geoTooltip');
+  container.innerHTML = '';
+
+  const costs = Object.values(d.geo).map(v=>v.cost);
+  const minC = Math.min(...costs), maxC = Math.max(...costs);
+
+  Object.entries(d.geo).forEach(([city,info])=>{
+    const t = (info.cost-minC)/(maxC-minC||1);
+    const size = 60 + t * 50;
+    const div = document.createElement('div');
+    div.className = 'geo-bubble';
+    div.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${info.x};top:${info.y};
+      transform:translate(-50%,-50%);
+      background:rgba(15,118,110,${0.5+t*0.4});
+      font-size:${size>80?10:9}px;
+    `;
+    div.innerHTML = `<span>${city.replace(' ','<br>')}</span><span style="font-size:9px;opacity:.8">${info.roi}x</span>`;
+    div.addEventListener('mouseenter',e=>{
+      tooltip.style.display='block';
+      tooltip.innerHTML = `
+        <strong>${city}</strong><br>
+        ROI: ${info.roi}x<br>
+        Conv: ${(info.conv*100).toFixed(2)}%<br>
+        Acq Cost: $${info.cost.toLocaleString()}<br>
+        Campaigns: ${info.count.toLocaleString()}
+      `;
+    });
+    div.addEventListener('mousemove',e=>{
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = (e.clientX-rect.left+12)+'px';
+      tooltip.style.top  = (e.clientY-rect.top+12)+'px';
+    });
+    div.addEventListener('mouseleave',()=>{tooltip.style.display='none'});
+    container.appendChild(div);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   8. SEGMENT ROI (Horizontal Bar)
+═══════════════════════════════════════════════ */
+function renderSegmentROI(d) {
+  const sorted = Object.entries(d.segment_roi).sort((a,b)=>b[1]-a[1]);
+  if(chartInstances.segROI) chartInstances.segROI.destroy();
+  const ctx = document.getElementById('chartSegmentROI').getContext('2d');
+  chartInstances.segROI = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:sorted.map(e=>e[0]),
+      datasets:[{data:sorted.map(e=>e[1]),backgroundColor:SEGMENT_COLORS,borderRadius:6,borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:v=>`ROI: ${v.raw.toFixed(3)}x`}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v+'x'},min:4.99,max:5.01},
+        y:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   9. TOP CAMPAIGNS TABLE
+═══════════════════════════════════════════════ */
+let tableData = [...DATA.top_campaigns];
+let tableSortKey = 'roi', tableSortDir = -1;
+let tableSearch = '', tablePage = 0;
+const PAGE_SIZE = 5;
+
+const channelBadgeColors = {
+  "Email":"#ECFDF5;color:#059669","Facebook":"#EFF6FF;color:#2563EB",
+  "Google Ads":"#FFFBEB;color:#D97706","Instagram":"#FDF4FF;color:#9333EA",
+  "Website":"#EEF2FF;color:#4F46E5","YouTube":"#FFF1F2;color:#E11D48"
+};
+
+function sortTable(key) {
+  if(tableSortKey===key) tableSortDir*=-1; else { tableSortKey=key; tableSortDir=-1; }
+  renderTable();
+}
+
+function filterTable() {
+  tableSearch = document.getElementById('tableSearch').value.toLowerCase();
+  tablePage = 0;
+  renderTable();
+}
+
+function renderTable() {
+  let rows = tableData.filter(r=>
+    !tableSearch ||
+    r.id.toLowerCase().includes(tableSearch) ||
+    r.company.toLowerCase().includes(tableSearch) ||
+    r.channel.toLowerCase().includes(tableSearch) ||
+    r.type.toLowerCase().includes(tableSearch)
+  );
+  rows.sort((a,b)=>{
+    let av=a[tableSortKey], bv=b[tableSortKey];
+    if(typeof av==='string') return tableSortDir*av.localeCompare(bv);
+    return tableSortDir*(av-bv);
+  });
+
+  const total = rows.length;
+  const pages = Math.ceil(total/PAGE_SIZE);
+  const slice = rows.slice(tablePage*PAGE_SIZE, (tablePage+1)*PAGE_SIZE);
+
+  const tBody = document.getElementById('tableBody');
+  tBody.innerHTML = slice.map((r,i)=>{
+    const rank = tablePage*PAGE_SIZE+i+1;
+    const bc = channelBadgeColors[r.channel]||'#F1F5F9;color:#475569';
+    const [bg,fg] = bc.split(';color:');
+    const roiPct = ((r.roi/8)*100).toFixed(0);
+    const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    return `<tr>
+      <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--primary)">#${r.id}</td>
+      <td style="font-weight:600">${r.company}</td>
+      <td><span class="tbl-badge" style="background:#F1F5F9;color:#475569">${r.type}</span></td>
+      <td><span class="tbl-badge" style="background:${bg};color:${fg}"><i class="fa fa-circle" style="font-size:6px;margin-right:4px"></i>${r.channel}</span></td>
+      <td>
+        <div class="roi-bar">
+          <span style="font-weight:700;font-family:var(--mono)">${r.roi.toFixed(1)}x</span>
+          <div class="roi-bar-track"><div class="roi-bar-fill" style="width:${roiPct}%"></div></div>
+        </div>
+      </td>
+      <td style="font-family:var(--mono)">${r.conv.toFixed(1)}%</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${[...Array(10)].map((_,j)=>`<span style="width:5px;height:5px;border-radius:50%;background:${j<r.eng?'var(--primary)':'var(--border)'}"></span>`).join('')}
+          <span style="font-size:10px;color:var(--ink-3);margin-left:4px">${r.eng}/10</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pag = document.getElementById('pagination');
+  if(pages<=1){pag.innerHTML='';return}
+  let btns = `<span class="page-info">${total} results</span>`;
+  for(let i=0;i<pages;i++) btns+=`<div class="page-btn${i===tablePage?' active':''}" onclick="goPage(${i})">${i+1}</div>`;
+  pag.innerHTML = btns;
+}
+
+function goPage(p){ tablePage=p; renderTable(); }
+
+/* ═══════════════════════════════════════════════
+   INSIGHTS
+═══════════════════════════════════════════════ */
+function renderInsights(d) {
+  const bestCh = Object.entries(d.roi_by_channel).sort((a,b)=>b[1]-a[1])[0];
+  const bestType = Object.entries(d.roi_by_type).sort((a,b)=>b[1]-a[1])[0];
+  const bestSeg = Object.entries(d.segment_roi).sort((a,b)=>b[1]-a[1])[0];
+  const bestAge = '25-34';
+  const lowestCostCh = 'Houston';
+  const allConvs = Object.values(d.monthly_conv).flat();
+  const avgConv = allConvs.reduce((a,b)=>a+b,0)/allConvs.length;
+
+  const insights = [
+    {label:'Best Marketing Channel',value:bestCh[0],desc:`Highest avg ROI of ${bestCh[1].toFixed(3)}x across all channels`,icon:'fa-signal',color:'#0F766E'},
+    {label:'Highest ROI Campaign Type',value:bestType[0],desc:`Leads with ${bestType[1].toFixed(3)}x average return on investment`,icon:'fa-layer-group',color:'#38BDF8'},
+    {label:'Strongest Customer Segment',value:bestSeg[0],desc:`Top performer with ${bestSeg[1].toFixed(3)}x average ROI`,icon:'fa-users',color:'#22C55E'},
+    {label:'Highest Converting Age Group',value:'25–34 Age Group',desc:`Consistently highest conversion rates across all genders`,icon:'fa-person',color:'#F59E0B'},
+    {label:'Most Efficient Location',value:'Houston, TX',desc:`Lowest avg acquisition cost at $12,454 per customer`,icon:'fa-location-dot',color:'#6366F1'},
+    {label:'Overall Performance',value:'Strong & Stable',desc:`Avg ${(avgConv*100).toFixed(2)}% conversion across 200K campaigns — consistent across all channels`,icon:'fa-chart-line',color:'#EC4899'},
+  ];
+
+  document.getElementById('insightsGrid').innerHTML = insights.map(ins=>`
+    <div class="insight-item" style="border-left-color:${ins.color}">
+      <div class="insight-label"><i class="fa ${ins.icon}" style="margin-right:4px;color:${ins.color}"></i>${ins.label}</div>
+      <div class="insight-value">${ins.value}</div>
+      <div class="insight-desc">${ins.desc}</div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   FILTER LOGIC (updates charts from pre-agg data)
+═══════════════════════════════════════════════ */
+function applyFilters() {
+  const ch = document.getElementById('fChannel').value;
+  const type = document.getElementById('fType').value;
+  const seg = document.getElementById('fSegment').value;
+  const loc = document.getElementById('fLocation').value;
+  const gen = document.getElementById('fGender').value;
+  const age = document.getElementById('fAge').value;
+
+  const active = [ch,type,seg,loc,gen,age].filter(Boolean).length;
+  document.getElementById('filterCount').textContent = active ? `${active} filter${active>1?'s':''} active` : '';
+
+  // For trend chart: filter by channel
+  let trendData = {...DATA.monthly_conv};
+  if(ch) trendData = {[ch]: DATA.monthly_conv[ch]||[]};
+  if(chartInstances.trend) {
+    const channels = Object.keys(trendData);
+    chartInstances.trend.data.datasets = channels.map(c=>({
+      label:c,
+      data:(trendData[c]||[]).map(v=>+(v*100).toFixed(2)),
+      borderColor:CHANNEL_COLORS[c]||'#0F766E',
+      backgroundColor:(CHANNEL_COLORS[c]||'#0F766E')+'22',
+      tension:.4,pointRadius:3,pointHoverRadius:6,borderWidth:2,fill:false
+    }));
+    chartInstances.trend.update();
+  }
+
+  // Filter table
+  tableData = DATA.top_campaigns.filter(r=>{
+    if(ch && r.channel!==ch) return false;
+    if(type && r.type!==type) return false;
+    return true;
+  });
+  tablePage = 0;
+  renderTable();
+}
+
+function resetFilters() {
+  ['fChannel','fType','fSegment','fLocation','fGender','fAge'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  tableData = [...DATA.top_campaigns];
+  applyFilters();
+}
+
+/* ═══════════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════════ */
+document.getElementById('darkToggle').addEventListener('click',()=>{
+  document.body.classList.toggle('dark');
+  const icon = document.querySelector('#darkToggle i');
+  icon.className = document.body.classList.contains('dark') ? 'fa fa-sun' : 'fa fa-moon';
+  // Update chart colors
+  const color = document.body.classList.contains('dark') ? '#94A3B8' : '#64748B';
+  Chart.defaults.color = color;
+  Object.values(chartInstances).forEach(c=>{if(c&&c.update)c.update()});
+});
+
+/* ═══════════════════════════════════════════════
+   CSV EXPORT
+═══════════════════════════════════════════════ */
+function exportCSV() {
+  const headers = ['Campaign_ID','Company','Channel','Type','ROI','Conversion_Rate','Engagement_Score'];
+  const rows = DATA.top_campaigns.map(r=>[r.id,r.company,r.channel,r.type,r.roi,r.conv+'%',r.eng]);
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'top_campaigns.csv';
+  a.click();
+}
+
+/* ═══════════════════════════════════════════════
+   DATE
+═══════════════════════════════════════════════ */
+document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+function init() {
+  renderKPIs(DATA);
+  renderChannelROI(DATA);
+  renderTypeROI(DATA);
+  renderHeatmap(DATA);
+  renderTrend(DATA);
+  renderAgeGender(DATA);
+  renderDonut(DATA);
+  renderGeo(DATA);
+  renderSegmentROI(DATA);
+  renderTable();
+  renderInsights(DATA);
+}
+
+// Wait for DOM + fonts
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+</script>
+</body>
+</html>
